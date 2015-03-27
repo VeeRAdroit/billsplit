@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+ "-//Hibernate/Hibernate Mapping DTD//EN"
+ "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd"> 
+
+<hibernate-mapping>
+   <class name="Bill" table="bills">
+      <meta attribute="class-description">
+         This class contains the bill details 
+      </meta>
+      <id name="billNo" type="int" column="bill_no">
+         <generator class="native"/>
+      </id>
+      <list name="payableContribution" cascade="all">
+         <key column="bill_no"/>
+         <list-index column="idx"/>
+         <one-to-many class="Contribution"/>
+      </list>
+            <list name="paidContribution" cascade="all">
+         <key column="bill_no"/>
+         <list-index column="idx"/>
+         <one-to-many class="Contribution"/>
+      </list>
+   </class>
+
+   <class name="Contribution" table="contributions">
+      <meta attribute="class-description">
+         This class contains the contributions for bills
+      </meta>
+      <id name="id" type="int" column="id">
+         <generator class="native"/>
+      </id>
+   </class>
+
+</hibernate-mapping>
