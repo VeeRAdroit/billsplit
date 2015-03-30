@@ -7,10 +7,14 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Proxy;
+
+import com.billsplit.constant.Currency;
 
 /**
  * @author veeraj
@@ -27,17 +31,22 @@ public class User  implements Serializable{
 	private static final long serialVersionUID = -255635319607729810L;
 
 	@Id
-	@Column(name = "user_id")
+	@Column(name = "user_id", nullable=false)
 	private String userId;
 
-	@Column(name = "name")
+	@Column(name = "name", nullable=false)
 	private String name;
+
+	@Column(name = "currency", nullable=false)
+	@Enumerated(EnumType.STRING)
+	private Currency currency;
 
 	public User(){}
 	
-	public User(String userId, String name) {
+	public User(String userId, String name, Currency currency) {
 		this.userId = userId;
 		this.name = name;
+		this.currency = currency;
 	}
 
 	public String getUserId() {
@@ -55,10 +64,20 @@ public class User  implements Serializable{
 	public void setName(String name) {
 		this.name = name;
 	}
+	
+	
+	public Currency getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(Currency currency) {
+		this.currency = currency;
+	}
+
 
 	@Override
 	public String toString() {
-		return String.format("User{ id=%s , name=%s }", userId, name);
+		return String.format("User{ id=%s , name=%s, currency=%s }", userId, name, currency.name());
 	}
 	
 	@Override

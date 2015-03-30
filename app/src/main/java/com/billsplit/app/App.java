@@ -1,17 +1,20 @@
 package com.billsplit.app;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Component;
 
+import com.billsplit.constant.Currency;
 import com.billsplit.constant.ShareType;
 import com.billsplit.helper.ContributionHelper;
 import com.billsplit.hibernate4.controller.BalanceController;
@@ -32,6 +35,8 @@ public class App {
 
 	public static final String UNDERLINE = "-----------------------------------";
 
+	Currency preferredCurrency;
+
 	@Autowired
 	UserController userController;
 
@@ -43,6 +48,14 @@ public class App {
 
 	@Autowired
 	BalanceController balanceController;
+
+	public Currency getPreferredCurrency() {
+		return preferredCurrency;
+	}
+
+	public void setPreferredCurrency(Currency preferredCurrency) {
+		this.preferredCurrency = preferredCurrency;
+	}
 
 	public UserController getUserController() {
 		return userController;
@@ -79,12 +92,14 @@ public class App {
 	public List<User> createUsers() {
 
 		List<User> createdUsers = new ArrayList<User>();
-
-		for (int i = 1; i < 10; i++) {
+		List<Currency> supportedCurrencies = Arrays.asList(Currency.values());
+		Random random = new Random();
+		for (int i = 1; i < 4; i++) {
 			String userId = "user" + i + "@xyz.com";
 			String name = "User " + i;
-
-			User user = addUser(userId, name);
+			Currency currency = supportedCurrencies.get(random
+					.nextInt(supportedCurrencies.size()));
+			User user = addUser(userId, name, currency);
 			if (user != null) {
 				createdUsers.add(user);
 			}
@@ -97,16 +112,18 @@ public class App {
 
 		List<User> users = createUsers();
 		Random random = new Random();
-		for (int i = 1; i < 5; i++) {
+		//for (int i = 1; i < 5; i++) {
+		int i=1;
 			String name = "User Group " + i;
-			addGroup(name, users.subList(random.nextInt(3), i + 3));
-		}
+			addGroup(name, users);
+		//	addGroup(name, users.subList(random.nextInt(3), i + 3));
+		//}
 
 	}
 
-	public User addUser(String userId, String name) {
+	public User addUser(String userId, String name, Currency currency) {
 
-		User user = new User(userId, name);
+		User user = new User(userId, name, currency);
 		System.out.println("<<<<<<<<<Added User>>>>>>>>");
 		System.out.println(UNDERLINE);
 		String addedUserId = userController.addUser(user);
@@ -139,8 +156,9 @@ public class App {
 	public Bill addBill(String description, float totalAmount, Group group,
 			List<Contribution> payableContribution,
 			List<Contribution> paidContribution) {
-
-		Bill bill = new Bill(description, totalAmount, group,
+		
+		Validate.notNull(getPreferredCurrency());
+		Bill bill = new Bill(description, totalAmount, getPreferredCurrency(), group,
 				payableContribution, paidContribution);
 		System.out.println("<<<<<<<<<Added Bill>>>>>>>>");
 		System.out.println(UNDERLINE);
@@ -154,8 +172,32 @@ public class App {
 		return null;
 
 	}
+	
+	public void createSingleBill()
+	{
+		String description = "Bill 1 description";
+		Group group = groupController.getAllGroups().get(0);
+		Float totalAmount = 1000f;
+		List<Contribution> payableContribution = ContributionHelper
+				.splitEqually(getPreferredCurrency(),totalAmount, group.getMembers());
+		List<Contribution> paidContribution = new ArrayList<Contribution>();
+		int memberCount = group.getMembers().size();
+		List<Float> shares = new ArrayList<Float>(memberCount);
+		shares.add(new Float(50));
+		shares.add(new Float(30));
+		shares.add(new Float(20));
+
+		
+		paidContribution = ContributionHelper.splitVariably(getPreferredCurrency(),
+				totalAmount, ShareType.PERCENTAGE, group.getMembers(),
+				shares);
+		
+		addBill(description, totalAmount, group, payableContribution, paidContribution);
+
+	}
 
 	public void createBills() {
+		Validate.notNull(getPreferredCurrency());
 		Random random = new Random();
 
 		for (int i = 1; i < 5; i++) {
@@ -168,11 +210,11 @@ public class App {
 			int memberCount = group.getMembers().size();
 
 			List<Contribution> payableContribution = ContributionHelper
-					.splitEqually(totalAmount, group.getMembers());
+					.splitEqually(getPreferredCurrency(),totalAmount, group.getMembers());
 			List<Contribution> paidContribution = new ArrayList<Contribution>();
 
 			if (memberCount < 4) {
-				paidContribution = ContributionHelper.splitEqually(totalAmount,
+				paidContribution = ContributionHelper.splitEqually(getPreferredCurrency(),totalAmount,
 						group.getMembers());
 			} else {
 				List<Float> shares = new ArrayList<Float>(memberCount);
@@ -185,7 +227,8 @@ public class App {
 				shares.set(1, new Float(30));
 				shares.set(2, new Float(20));
 
-				paidContribution = ContributionHelper.splitVariably(
+				
+				paidContribution = ContributionHelper.splitVariably(getPreferredCurrency(),
 						totalAmount, ShareType.PERCENTAGE, group.getMembers(),
 						shares);
 			}
@@ -216,8 +259,9 @@ public class App {
 			System.out.println("No Bills added for this group ! ");
 		} else {
 			for (Entry<String, Float> entry : balanceForGroup.entrySet()) {
-				System.out.println(String.format("User : %s , Balance : %.2f ",
-						entry.getKey(), entry.getValue()));
+				User user = userController.getUser(entry.getKey());
+				System.out.println(String.format("User : %s , Balance : %.2f, Currency : %s ",
+						user.getUserId(), entry.getValue(), user.getCurrency()));
 			}
 		}
 
@@ -227,8 +271,8 @@ public class App {
 		Float groupBalanceForUser = balanceController.getGroupBalanceForUser(
 				user, group);
 		System.out.println(String.format(
-				"User : %s, Group : %s, Balance : %.2f", user.getUserId(),
-				group.getGroupId(), groupBalanceForUser));
+				"User : %s, Group : %s, Balance : %.2f, Currency : %s", user.getUserId(),
+				group.getGroupId(), groupBalanceForUser, user.getCurrency()));
 
 	}
 
@@ -238,35 +282,37 @@ public class App {
 		Map<String, Float> groupWiseBalanceForUser = balanceController
 				.getGroupWiseBalanceForUser(user);
 		if (groupWiseBalanceForUser.isEmpty()) {
-			System.out.println("No Bills added for this group ! ");
+			System.out.println("No Bills for User : "
+				+ user.getUserId());
 		} else {
 			for (Entry<String, Float> entry : groupWiseBalanceForUser
 					.entrySet()) {
 				System.out.println(String.format(
-						"Group : %s , Balance : %.2f ", entry.getKey(),
-						entry.getValue()));
+						"Group : %s , Balance : %.2f , Currency : %s ", entry.getKey(),
+						entry.getValue(), user.getCurrency().name()));
 			}
 		}
 	}
 
 	private void showOverallBalanceForUser(User user) {
-		System.out.println(String.format("User : %s , Overall Balance : %.2f ",
+		System.out.println(String.format("User : %s , Overall Balance : %.2f, Currency : %s ",
 				user.getUserId(),
-				balanceController.getOverallBalanceForUser(user)));
+				balanceController.getOverallBalanceForUser(user), user.getCurrency().name()));
 
 	}
 
 	private void showOverallBalanceSummary() {
 		for (Entry<String, Float> entry : balanceController
 				.getOverallBalanceSummary().entrySet()) {
+			User user = userController.getUser(entry.getKey());
 			System.out.println(String.format(
-					"User : %s , Overall Balance : %.2f ", entry.getKey(),
-					entry.getValue()));
+					"User : %s , Overall Balance : %.2f, Currency : %s ", user.getUserId(),
+					entry.getValue(),user.getCurrency()));
 		}
 
 	}
 
-	private void showBalanceSummary() {
+	void showBalanceSummary() {
 
 		List<User> userList = userController.getAllUsers();
 
@@ -316,15 +362,31 @@ public class App {
 				"spring-beans.xml");
 
 		App app = (App) context.getBean(App.class);
-		
+
+
 		// Create Groups with Members
 		app.createGroups();
 
+		// set preferred currency before adding bills
+		app.setPreferredCurrency(Currency.INR);
+		
 		// Create Bills with group and contributions
-		app.createBills();
-
+		//app.createBills();
+		app.createSingleBill();
 		// Check Balance for Users
 		app.showBalanceSummary();
+		
+		User user = app.getUserController().getUser("user1@xyz.com");
+		user.setCurrency(Currency.INR);
+		if(app.getUserController().updateUser(user))
+		{
+			System.out.println("<<<<<< Changed User1 currency to INR >>>>>");
+			// Check Balance for Users
+			app.showBalanceSummary();
+		}
+		
+		
+		
 
 	}
 

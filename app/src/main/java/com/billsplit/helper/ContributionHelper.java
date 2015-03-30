@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.Validate;
 
+import com.billsplit.constant.Currency;
 import com.billsplit.constant.ShareType;
 import com.billsplit.hibernate4.model.Contribution;
 import com.billsplit.hibernate4.model.Group;
@@ -19,20 +20,23 @@ import com.billsplit.hibernate4.model.User;
  */
 public class ContributionHelper {
 
-	public static List<Contribution> splitEqually(float totalAmount,
+	public static List<Contribution> splitEqually(Currency billCurrency, float totalAmount,
 			List<User> members) {
 		List<Contribution> contributionList = new ArrayList<Contribution>();
 		float share = 0;
 		for (User user : members) {
 			share = (float) totalAmount / members.size();
-			Contribution contribution = new Contribution(user, share);
+			float shareInMemberCurrency = CurrencyHelper.convertCurrencyValue(
+					share, billCurrency, user.getCurrency());
+			Contribution contribution = new Contribution(user, shareInMemberCurrency);
 			contributionList.add(contribution);
 		}
 		return contributionList;
 	}
 
-	public static List<Contribution> splitVariably(float totalAmount,
-			ShareType shareType, List<User> members, List<Float> shares) {
+	public static List<Contribution> splitVariably(Currency billCurrency,
+			float totalAmount, ShareType shareType, List<User> members,
+			List<Float> shares) {
 
 		Validate.isTrue(shares.size() == members.size(),
 				"No of Shares : %d is not equal to No of Members = %d",
@@ -57,13 +61,15 @@ public class ContributionHelper {
 		for (int i = 0; i < members.size(); i++) {
 			float share = ShareHelper.calculateShare(totalAmount, shareType,
 					shares.get(i));
-			Contribution contribution = new Contribution(members.get(i), share);
+			float shareInMemberCurrency = CurrencyHelper.convertCurrencyValue(
+					share, billCurrency, members.get(i).getCurrency());
+			Contribution contribution = new Contribution(members.get(i), shareInMemberCurrency);
 			contributionList.add(contribution);
 		}
 		return contributionList;
 	}
 
-	public static boolean validateContribution(Float totalAmount,
+	public static boolean validateContribution(Currency billCurrency,Float totalAmount,
 			List<Contribution> payableContributions,
 			List<Contribution> paidContributions, Group group) {
 
@@ -71,9 +77,9 @@ public class ContributionHelper {
 		Validate.isTrue(validateContributedMembers(paidContributions, group));
 
 		Validate.isTrue(validateShareAmounts(
-				ShareHelper.getShareAmounts(payableContributions), totalAmount));
+				ShareHelper.getShareAmounts(payableContributions,billCurrency), totalAmount));
 		Validate.isTrue(validateShareAmounts(
-				ShareHelper.getShareAmounts(paidContributions), totalAmount));
+				ShareHelper.getShareAmounts(paidContributions,billCurrency), totalAmount));
 
 		return true;
 	}

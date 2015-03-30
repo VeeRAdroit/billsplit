@@ -10,10 +10,11 @@ import org.junit.Test;
  *
  */
 public class UserTest {
+	public App app;
 
 	@Test
-	public void addUserTests(){
-		
+	public void addUserTests() {
+
 	}
 
 }

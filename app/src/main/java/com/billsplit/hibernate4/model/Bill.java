@@ -11,6 +11,8 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -24,6 +26,7 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.Proxy;
 
+import com.billsplit.constant.Currency;
 import com.billsplit.helper.ContributionHelper;
 
 /**
@@ -46,6 +49,10 @@ public class Bill implements Serializable {
 
 	@Column(name = "total_amount")
 	private float totalAmount;
+	
+	@Column(name = "currency", nullable=false)
+	@Enumerated(EnumType.STRING)
+	private Currency currency;
 
 	@Column(name = "description")
 	private String description;
@@ -66,16 +73,29 @@ public class Bill implements Serializable {
 	public Bill() {
 	}
 
-	public Bill(String description, float totalAmount, Group group,
+	public Bill(String description, float totalAmount, Currency currency, Group group,
 			List<Contribution> payableContribution,
 			List<Contribution> paidContribution) {
-		ContributionHelper.validateContribution(totalAmount,
+		ContributionHelper.validateContribution(currency,totalAmount,
 				payableContribution, paidContribution, group);
 		this.description = description;
 		this.totalAmount = totalAmount;
+		this.currency = currency;
 		this.group = group;
 		this.payableContribution = payableContribution;
 		this.paidContribution = paidContribution;
+	}
+
+	public long getBillNo() {
+		return billNo;
+	}
+
+	public Currency getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(Currency currency) {
+		this.currency = currency;
 	}
 
 	public String getDescription() {
@@ -122,8 +142,8 @@ public class Bill implements Serializable {
 	public String toString() {
 
 		return String
-				.format("Bill{ billNo:%d, totalAmount:%f, desc:%s, groupId:%s, contribution:[%s], paidBy:[%s] }",
-						billNo, totalAmount, description, group.getGroupId(),
+				.format("Bill{ billNo:%d, desc:%s, totalAmount:%f, currency:%s, groupId:%s, contribution:[%s], paidBy:[%s] }",
+						billNo, description, totalAmount, currency.name(), group.getGroupId(),
 						StringUtils.join(payableContribution, ","),
 						StringUtils.join(paidContribution, ","));
 

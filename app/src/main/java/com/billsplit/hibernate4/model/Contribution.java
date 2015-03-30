@@ -7,8 +7,12 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+
+import com.billsplit.constant.Currency;
 
 /**
  * @author veeraj
@@ -29,12 +33,17 @@ public class Contribution implements Serializable {
 	@Column(name = "share")
 	private float share;
 
+	@Column(name = "currency")
+	@Enumerated(EnumType.STRING)
+	private Currency currency;
+	
 	public Contribution() {
 	}
 
 	public Contribution(User user, float share) {
 		this.user = user;
 		this.share = share;
+		this.currency = user.getCurrency();
 	}
 
 	public User getUser() {
@@ -52,12 +61,22 @@ public class Contribution implements Serializable {
 	public void setShare(float share) {
 		this.share = share;
 	}
+	
+
+	public Currency getCurrency() {
+		return currency;
+	}
+
+	public void setCurrency(Currency currency) {
+		this.currency = currency;
+	}
 
 	@Override
 	public String toString() {
 
 		return String
-				.format("{ person:%s, share:%f }", user.getUserId(), share);
+				.format("{ person:%s, share:%f, currency:%s }", user.getUserId(), share, currency.name());
 
 	}
+
 }
